@@ -8,13 +8,21 @@ Sovereign BTC Streams is a Next.js DApp that demonstrates vault-backed BTC strea
 
 ```mermaid
 flowchart TD
-    A[Next.js UI] --> B[/api/createStream]
-    A --> C[/api/claimStream]
-    A --> D[/api/verifyProof]
-    B --> E[Grail Pro Vault (testnet/mocked)]
-    B --> F[Charms SDK (testnet/mocked)]
+    A[Next.js UI]
+    B[/api/createStream/]
+    C[/api/claimStream/]
+    D[/api/verifyProof/]
+    E[Grail Pro Vault (testnet/mocked)]
+    F[Charms SDK (testnet/mocked)]
+    G[zkBTC proof gen/verify (testnet/mocked)]
+
+    A --> B
+    A --> C
+    A --> D
+    B --> E
+    B --> F
     C --> F
-    C --> G[zkBTC proof gen/verify (testnet/mocked)]
+    C --> G
     D --> G
 ```
 

@@ -1,40 +1,118 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Sovereign BTC Streams
 
-## Getting Started
+Sovereign BTC Streams is a Next.js DApp that demonstrates vault-backed BTC streaming with Charms and zkBTC proofing. The code supports real testnet endpoints when available and cleanly falls back to deterministic mocks for offline/demo use.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture (high level)
+
+```mermaid
+flowchart TD
+    A[Next.js UI] --> B[/api/createStream]
+    A --> C[/api/claimStream]
+    A --> D[/api/verifyProof]
+    B --> E[Grail Pro Vault (testnet/mocked)]
+    B --> F[Charms SDK (testnet/mocked)]
+    C --> F
+    C --> G[zkBTC proof gen/verify (testnet/mocked)]
+    D --> G
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## Stack
+- Next.js (pages router) + TypeScript
+- Chakra UI
+- Axios for HTTP
+- SQLite (better-sqlite3) for local state
+- Charms / Grail / zkBTC integrations with testnet-or-mock fallbacks
+- snarkjs for mockable proof digesting
+- Xverse (via `@sats-connect/core`) for Bitcoin testnet wallet connect & signing
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+---
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## Quickstart
+```bash
+npm install
+npm run dev
+# open http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Seed a demo stream (uses mocks if no env vars):
+```bash
+npm run demo
+```
 
-## Learn More
+Connect a wallet (Xverse, Bitcoin testnet):
+- Install Xverse browser extension and switch to Bitcoin testnet.
+- Click “Connect Xverse” (top-right of each page). If not connected, the app falls back to a deterministic mock signer.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## Environment
+Set any of the following to hit real testnet endpoints; leave unset to use mocks.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Wallet signature enforcement
+REQUIRE_WALLET_SIG=true          # require valid wallet signature on API routes
 
-## Deploy on Vercel
+# Grail Pro
+GRAIL_API_BASE=https://grail-pro-testnet.example.com
+GRAIL_API_KEY=...
+GRAIL_ALLOW_FALLBACK=true   # set to false to fail fast
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Charms
+CHARMS_API_BASE=https://charms-testnet.example.com
+CHARMS_API_KEY=...
+CHARMS_ALLOW_FALLBACK=true
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+# zkBTC
+ZKBTC_API_BASE=https://zkbtc-testnet.example.com
+ZKBTC_API_KEY=...
+ZKBTC_ALLOW_FALLBACK=true
+```
+
+SQLite lives at `data/streams.db` and is created automatically.
+
+---
+
+## Key flows
+- **/pages/create.tsx** → POST `/api/createStream`: deposits into Grail, mints StreamCharm, persists stream.
+- **/pages/claim.tsx** → POST `/api/claimStream`: generates zk proof, verifies, updates streamed commitment, simulates cross-chain release.
+- **/pages/verify.tsx** → POST `/api/verifyProof`: auditor-style verification of provided proof.
+- **/api/streams**: lightweight dashboard feed for all streams + claims.
+
+---
+
+## API reference (local dev)
+- `POST /api/createStream`  
+  `{ totalAmountBtc, rateSatsPerSec, startUnix, cliffUnix, beneficiary, revocationPubkey, policy }`
+- `POST /api/claimStream`  
+  `{ streamId, claimedAmountSats, timestamp }`
+- `POST /api/verifyProof`  
+  `{ streamId, proof, claimedAmountSats, timestamp }`
+- `GET /api/streams` → `{ streams: [...] }`
+
+All amounts are integers in sats except `totalAmountBtc` (BTC) on creation.
+
+---
+
+## Demo & testing checklist
+- `npm run demo` seeds a stream with mock/testnet integrations.
+- `npm run dev` and visit:
+  - `/` dashboard (fetches `/api/streams`)
+  - `/create` to mint a new stream
+  - `/claim` to generate & verify zk proof, update commitments
+  - `/verify` to audit any proof payload
+- Toggle env vars above to switch between real testnet calls and deterministic mocks.
+
+---
+
+## Production hardening (next steps)
+- Wire real Grail/Charms/zkBTC endpoints and secrets management.
+- Add per-request auth + rate limiting.
+- Persist to external DB (Postgres) and add background stream updaters.
+- Integrate real cross-chain unlock flows (Cardano/Litecoin testnets).
+
+## License
+MIT

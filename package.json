@@ -6,12 +6,25 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "demo": "node scripts/demo-runner.cjs"
   },
   "dependencies": {
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@sats-connect/core": "^0.14.0",
+    "axios": "^1.13.2",
+    "better-sqlite3": "^12.5.0",
+    "bitcoinjs-lib": "^7.0.0",
+    "bitcoinjs-message": "^2.2.0",
+    "dayjs": "^1.11.19",
+    "framer-motion": "^12.23.26",
     "next": "16.0.8",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "snarkjs": "^0.7.5",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -19,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.8",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

@@ -4,6 +4,7 @@ import {
   Button,
   HStack,
   Stack,
+  StackDirection,
   Text,
   useBreakpointValue,
 } from "@chakra-ui/react";
@@ -29,7 +30,7 @@ export default function StreamCard({
 }: StreamCardProps) {
   const statusColor =
     stream.status === "active" ? "green" : stream.status === "completed" ? "blue" : "red";
-  const layout = useBreakpointValue({ base: "column", md: "row" });
+  const layout = useBreakpointValue<StackDirection>({ base: "column", md: "row" });
 
   return (
     <Box

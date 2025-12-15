@@ -9,9 +9,52 @@ import {
   updateStreamedCommitment,
 } from "./db";
 
-const CHARMS_API_BASE = process.env.CHARMS_API_BASE;
+const CHARMS_API_BASE = process.env.CHARMS_API_BASE || "https://v8.charms.dev";
 const CHARMS_API_KEY = process.env.CHARMS_API_KEY;
 const ALLOW_FALLBACK = process.env.CHARMS_ALLOW_FALLBACK !== "false";
+
+export type SpellIn = {
+  utxo_id: string;
+  charms: Record<string, number>;
+};
+
+export type SpellOut = {
+  address: string;
+  charms: Record<string, number>;
+};
+
+export type Spell = {
+  version: number;
+  apps: Record<string, string>;
+  ins: SpellIn[];
+  outs: SpellOut[];
+};
+
+export type ProverRequest = {
+  spell: Spell;
+  binaries: Record<string, string>;
+  prev_txs: string[];
+  funding_utxo: string;
+  funding_utxo_value: number;
+  change_address: string;
+  fee_rate: number;
+};
+
+export async function proveSpell(req: ProverRequest): Promise<{ commitTx: string; spellTx: string }> {
+  try {
+    const res = await axios.post(`${CHARMS_API_BASE}/spells/prove`, req, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const [commitTx, spellTx] = res.data;
+    return { commitTx, spellTx };
+  } catch (err: any) {
+    console.error("Prover API failed:", err.response?.data || err.message);
+    throw new Error("Failed to prove spell via Charms API");
+  }
+}
+
 
 export type MintStreamParams = {
   vaultId: string;
@@ -55,7 +98,7 @@ export async function mintStreamCharm(params: MintStreamParams): Promise<CharmMe
     updated_at: nowIso,
   };
 
-  createStream(baseRecord);
+  await createStream(baseRecord);
 
   if (CHARMS_API_BASE) {
     try {
@@ -131,7 +174,7 @@ export async function updateStreamCharm(
       console.warn("Charms update failed, persisting locally");
     }
   }
-  updateStreamedCommitment(streamId, streamedCommitmentSats, status);
+  await updateStreamedCommitment(streamId, streamedCommitmentSats, status);
 }
 
 export async function queryStreamCharm(streamId: string): Promise<CharmMetadata | null> {
@@ -150,7 +193,7 @@ export async function queryStreamCharm(streamId: string): Promise<CharmMetadata 
       console.warn("Charms query failed, reading local state");
     }
   }
-  const record = getStream(streamId);
+  const record = await getStream(streamId);
   if (!record) return null;
   return {
     stream_id: record.id,

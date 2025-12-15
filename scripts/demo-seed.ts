@@ -3,7 +3,6 @@
 // #endregion
 import fs from "node:fs";
 import path from "node:path";
-import { depositVault } from "../lib/grail";
 import { mintStreamCharm } from "../lib/charms";
 import { btcToSats, nowUnix } from "../lib/utils";
 
@@ -32,7 +31,7 @@ const appendLog = (payload: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: entry,
-  }).catch(() => {});
+  }).catch(() => { });
 };
 
 async function main() {
@@ -48,21 +47,17 @@ async function main() {
   const cliff = start;
 
   console.log("Seeding demo stream with mock/testnet integrations...");
-  appendLog({
-    hypothesisId: "H1",
-    location: "scripts/demo-seed.ts:45",
-    message: "before depositVault",
-    data: { totalAmountSats, beneficiary: "bc1qdemoaddress" },
-  });
-  const vault = await depositVault(totalAmountSats, "bc1qdemoaddress", "standard");
+  // Mock Vault Address (in real app, use getScrollsAddress)
+  const vaultId = "mock_scrolls_address_seed";
+
   appendLog({
     hypothesisId: "H1",
     location: "scripts/demo-seed.ts:53",
-    message: "after depositVault",
-    data: { vaultId: vault.vault_id },
+    message: "using mock vaultId",
+    data: { vaultId },
   });
   const charm = await mintStreamCharm({
-    vaultId: vault.vault_id,
+    vaultId: vaultId,
     totalAmountSats,
     rateSatsPerSec: 50,
     startUnix: start,
@@ -71,7 +66,7 @@ async function main() {
     revocationPubkey: "revoker_pubkey_demo",
   });
 
-  console.log("Vault ID:", vault.vault_id);
+  console.log("Vault ID:", vaultId);
   console.log("Stream ID:", charm.stream_id);
   console.log("Charm ID:", charm.charm_id);
   console.log("Run `npm run dev` and visit /claim to test claims.");

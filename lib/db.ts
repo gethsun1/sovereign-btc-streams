@@ -1,11 +1,12 @@
-import DatabaseConstructor, { Database } from "better-sqlite3";
-import fs from "fs";
-import path from "path";
+import { PrismaClient, Stream, Claim, Vault } from "@prisma/client";
 import { z } from "zod";
 
-const dbPath = path.join(process.cwd(), "data", "streams.db");
+// Maintain global Prisma instance to prevent connection exhaustion in dev
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-type GlobalWithDb = typeof globalThis & { __sbtc_db__?: Database };
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export type StreamStatus = "active" | "revoked" | "completed";
 
@@ -42,171 +43,132 @@ export type VaultRecord = {
   created_at: string;
 };
 
-const streamSchema = z.object({
-  id: z.string(),
-  vault_id: z.string().nullable(),
-  charm_id: z.string().nullable(),
-  beneficiary: z.string(),
-  total_amount_sats: z.number(),
-  rate_sats_per_sec: z.number(),
-  start_unix: z.number(),
-  cliff_unix: z.number(),
-  revocation_pubkey: z.string(),
-  streamed_commitment_sats: z.number(),
-  status: z.union([z.literal("active"), z.literal("revoked"), z.literal("completed")]),
-  created_at: z.string(),
-  updated_at: z.string(),
+// Utilities for BigInt/Date conversion
+const toStreamRecord = (s: Stream): StreamRecord => ({
+  ...s,
+  total_amount_sats: Number(s.total_amount_sats),
+  rate_sats_per_sec: Number(s.rate_sats_per_sec),
+  start_unix: Number(s.start_unix),
+  cliff_unix: Number(s.cliff_unix),
+  streamed_commitment_sats: Number(s.streamed_commitment_sats),
+  status: s.status as StreamStatus,
+  created_at: s.created_at.toISOString(),
+  updated_at: s.updated_at.toISOString(),
 });
 
-const claimSchema = z.object({
-  id: z.string(),
-  stream_id: z.string(),
-  amount_sats: z.number(),
-  proof: z.string(),
-  verified: z.number(),
-  created_at: z.string(),
+const toClaimRecord = (c: Claim): ClaimRecord => ({
+  ...c,
+  amount_sats: Number(c.amount_sats),
+  verified: c.verified,
+  created_at: c.created_at.toISOString(),
 });
 
-function ensureDb(): Database {
-  const g = globalThis as GlobalWithDb;
-  if (g.__sbtc_db__) {
-    return g.__sbtc_db__;
-  }
+const toVaultRecord = (v: Vault): VaultRecord => ({
+  ...v,
+  amount_sats: Number(v.amount_sats),
+  created_at: v.created_at.toISOString(),
+});
 
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new DatabaseConstructor(dbPath);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS streams (
-      id TEXT PRIMARY KEY,
-      vault_id TEXT,
-      charm_id TEXT,
-      beneficiary TEXT NOT NULL,
-      total_amount_sats INTEGER NOT NULL,
-      rate_sats_per_sec INTEGER NOT NULL,
-      start_unix INTEGER NOT NULL,
-      cliff_unix INTEGER NOT NULL,
-      revocation_pubkey TEXT NOT NULL,
-      streamed_commitment_sats INTEGER NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'active',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS claims (
-      id TEXT PRIMARY KEY,
-      stream_id TEXT NOT NULL,
-      amount_sats INTEGER NOT NULL,
-      proof TEXT NOT NULL,
-      verified INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (stream_id) REFERENCES streams(id)
-    );
-    CREATE TABLE IF NOT EXISTS vaults (
-      id TEXT PRIMARY KEY,
-      amount_sats INTEGER NOT NULL,
-      beneficiary TEXT NOT NULL,
-      policy TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-  `);
-
-  g.__sbtc_db__ = db;
-  return db;
+export async function upsertVault(vault: VaultRecord) {
+  await prisma.vault.upsert({
+    where: { id: vault.id },
+    create: {
+      id: vault.id,
+      amount_sats: BigInt(vault.amount_sats),
+      beneficiary: vault.beneficiary,
+      policy: vault.policy,
+      created_at: new Date(vault.created_at),
+    },
+    update: {
+      amount_sats: BigInt(vault.amount_sats),
+      beneficiary: vault.beneficiary,
+      policy: vault.policy,
+    },
+  });
 }
 
-export function upsertVault(vault: VaultRecord) {
-  const db = ensureDb();
-  const stmt = db.prepare(`
-    INSERT INTO vaults (id, amount_sats, beneficiary, policy, created_at)
-    VALUES (@id, @amount_sats, @beneficiary, @policy, @created_at)
-    ON CONFLICT(id) DO UPDATE SET
-      amount_sats=excluded.amount_sats,
-      beneficiary=excluded.beneficiary,
-      policy=excluded.policy
-  `);
-  stmt.run(vault);
+export async function createStream(record: StreamRecord) {
+  await prisma.stream.create({
+    data: {
+      id: record.id,
+      vault_id: record.vault_id,
+      charm_id: record.charm_id,
+      beneficiary: record.beneficiary,
+      total_amount_sats: BigInt(record.total_amount_sats),
+      rate_sats_per_sec: BigInt(record.rate_sats_per_sec),
+      start_unix: BigInt(record.start_unix),
+      cliff_unix: BigInt(record.cliff_unix),
+      revocation_pubkey: record.revocation_pubkey,
+      streamed_commitment_sats: BigInt(record.streamed_commitment_sats),
+      status: record.status,
+      created_at: new Date(record.created_at),
+      updated_at: new Date(record.updated_at),
+    },
+  });
 }
 
-export function createStream(record: StreamRecord) {
-  const db = ensureDb();
-  const stmt = db.prepare(`
-    INSERT INTO streams (
-      id, vault_id, charm_id, beneficiary, total_amount_sats, rate_sats_per_sec,
-      start_unix, cliff_unix, revocation_pubkey, streamed_commitment_sats,
-      status, created_at, updated_at
-    ) VALUES (
-      @id, @vault_id, @charm_id, @beneficiary, @total_amount_sats, @rate_sats_per_sec,
-      @start_unix, @cliff_unix, @revocation_pubkey, @streamed_commitment_sats,
-      @status, @created_at, @updated_at
-    )
-  `);
-  stmt.run(record);
-}
-
-export function updateStreamedCommitment(
+export async function updateStreamedCommitment(
   streamId: string,
   streamedCommitmentSats: number,
   status?: StreamStatus,
 ) {
-  const db = ensureDb();
-  const stmt = db.prepare(`
-    UPDATE streams
-    SET streamed_commitment_sats = @streamed_commitment_sats,
-        status = COALESCE(@status, status),
-        updated_at = @updated_at
-    WHERE id = @id
-  `);
-  stmt.run({
-    id: streamId,
-    streamed_commitment_sats: streamedCommitmentSats,
-    status,
-    updated_at: new Date().toISOString(),
+  await prisma.stream.update({
+    where: { id: streamId },
+    data: {
+      streamed_commitment_sats: BigInt(streamedCommitmentSats),
+      status: status || undefined,
+    },
   });
 }
 
-export function attachCharmId(streamId: string, charmId: string) {
-  const db = ensureDb();
-  const stmt = db.prepare(`
-    UPDATE streams
-    SET charm_id = @charm_id,
-        updated_at = @updated_at
-    WHERE id = @id
-  `);
-  stmt.run({
-    id: streamId,
-    charm_id: charmId,
-    updated_at: new Date().toISOString(),
+export async function attachCharmId(streamId: string, charmId: string) {
+  await prisma.stream.update({
+    where: { id: streamId },
+    data: { charm_id: charmId },
   });
 }
 
-export function getStream(streamId: string): StreamRecord | null {
-  const db = ensureDb();
-  const row = db
-    .prepare("SELECT * FROM streams WHERE id = ?")
-    .get(streamId);
-  if (!row) return null;
-  return streamSchema.parse(row);
+export async function getStream(streamId: string): Promise<StreamRecord | null> {
+  const stream = await prisma.stream.findUnique({ where: { id: streamId } });
+  if (!stream) return null;
+  return toStreamRecord(stream);
 }
 
-export function listStreams(): StreamRecord[] {
-  const db = ensureDb();
-  const rows = db.prepare("SELECT * FROM streams ORDER BY created_at DESC").all();
-  return rows.map((row) => streamSchema.parse(row));
+export async function listStreams(): Promise<StreamRecord[]> {
+  const streams = await prisma.stream.findMany({
+    orderBy: { created_at: "desc" },
+    // include: { claims: true }, // Optimization: fetch claims if needed, though original listStreams didn't specify. 
+                               // Actually original listStreams didn't fetch claims. 
+                               // But 'StreamRecord' doesn't have claims.
+                               // Wait, pages/index.tsx uses 'streams.claims?.length'. 
+                               // Original 'StreamRecord' in db.ts did NOT have 'claims'.
+                               // But 'StreamUIModel' in types.ts MIGHT.
+                               // Let's check types.ts usage.
+                               // 'listStreams' in db.ts just selects * from streams.
+                               // The frontend merges them or fetches separately?
+                               // Looking at index.tsx: `setStreams(res.data.streams)`
+                               // api/streams.ts likely does the join.
+  });
+  return streams.map(toStreamRecord);
 }
 
-export function recordClaim(claim: ClaimRecord) {
-  const db = ensureDb();
-  const stmt = db.prepare(`
-    INSERT INTO claims (id, stream_id, amount_sats, proof, verified, created_at)
-    VALUES (@id, @stream_id, @amount_sats, @proof, @verified, @created_at)
-  `);
-  stmt.run(claim);
+export async function recordClaim(claim: ClaimRecord) {
+  await prisma.claim.create({
+    data: {
+      id: claim.id,
+      stream_id: claim.stream_id,
+      amount_sats: BigInt(claim.amount_sats),
+      proof: claim.proof,
+      verified: claim.verified,
+      created_at: new Date(claim.created_at),
+    },
+  });
 }
 
-export function listClaims(streamId: string): ClaimRecord[] {
-  const db = ensureDb();
-  const rows = db
-    .prepare("SELECT * FROM claims WHERE stream_id = ? ORDER BY created_at DESC")
-    .all(streamId);
-  return rows.map((row) => claimSchema.parse(row));
+export async function listClaims(streamId: string): Promise<ClaimRecord[]> {
+  const claims = await prisma.claim.findMany({
+    where: { stream_id: streamId },
+    orderBy: { created_at: "desc" },
+  });
+  return claims.map(toClaimRecord);
 }

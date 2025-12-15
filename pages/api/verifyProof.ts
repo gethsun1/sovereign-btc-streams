@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { streamId, proof, claimedAmountSats, timestamp } = parsed.data;
-  const stream = getStream(streamId);
+  const stream = await getStream(streamId);
   if (!stream) {
     return res.status(404).json({ error: "Stream not found" });
   }

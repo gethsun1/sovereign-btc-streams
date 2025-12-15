@@ -1,126 +1,111 @@
 # Sovereign BTC Streams
 
-Sovereign BTC Streams is a Next.js DApp that demonstrates vault-backed BTC streaming with Charms and zkBTC proofing. The code supports real testnet endpoints when available and cleanly falls back to deterministic mocks for offline/demo use.
+Sovereign BTC Streams is a Next.js DApp that demonstrates **vault-backed BTC streaming** using **Charms** (ZK Logic) and **Scrolls** (Programmable Vaults).
+
+This architecture allows for **Sovereign** streams, where funds are held in a vault that enforces off-chain vesting logic via on-chain Zero-Knowledge Proofs, rather than relying on a trusted custodian.
 
 ---
 
-## Architecture (high level)
+## Architecture
 
 ```mermaid
 flowchart TD
-    A[Next.js UI]
-    B[/api/createStream/]
-    C[/api/claimStream/]
-    D[/api/verifyProof/]
-    E[Grail Pro Vault (testnet/mocked)]
-    F[Charms SDK (testnet/mocked)]
-    G[zkBTC proof gen/verify (testnet/mocked)]
+    A[Next.js App] --> B[/api/createStream]
+    A --> C[/api/claimStream]
+    
+    subgraph "Sovereign Infrastructure"
+        B -->|Derive Address| D[Scrolls API]
+        B -->|Mint Charm| E[Charms Indexer]
+        C -->|Prove Vesting| F[Charms Prover]
+        C -->|Sign Tx| D
+    end
 
-    A --> B
-    A --> C
-    A --> D
-    B --> E
-    B --> F
-    C --> F
-    C --> G
-    D --> G
+    D -->|Bitcoin Network| G[BTC Testnet4]
 ```
+
+### Core Components
+- **Charms**: Provides the "Spell" logic (vesting schedules) and Prover API (`https://v8.charms.dev`).
+- **Scrolls**: Acts as the Programmable Vault (`https://scrolls.charms.dev`). It derives deterministic addresses and only signs transactions that carry valid Spells/Proofs.
+- **Prisma + PostgreSQL**: Persists stream metadata locally for specific application needs.
 
 ---
 
 ## Stack
-- Next.js (pages router) + TypeScript
-- Chakra UI
-- Axios for HTTP
-- SQLite (better-sqlite3) for local state
-- Charms / Grail / zkBTC integrations with testnet-or-mock fallbacks
-- snarkjs for mockable proof digesting
-- Xverse (via `@sats-connect/core`) for Bitcoin testnet wallet connect & signing
+- **Frontend**: Next.js 14, Chakra UI, React 18
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL 15
+- **Bitcoin**: `@sats-connect/core` (Xverse Wallet), `bitcoinjs-lib`
+- **Integrations**: Charms Prover API, Scrolls Bitcoin API
 
 ---
 
-## Quickstart
+## Quickstart (Docker)
+
+The easiest way to run the full stack (App + DB) is via Docker Compose.
+
 ```bash
+# 1. Start the Database
+docker compose up -d db
+
+# 2. Run Migrations
+npx prisma migrate deploy
+
+# 3. Start the Application
+docker compose up -d app
+# App available at http://localhost:3000
+```
+
+## Quickstart (Local Dev)
+
+If you prefer running the app locally against a Dockerized DB:
+
+```bash
+# 1. Start DB
+docker compose up -d db
+
+# 2. Install Dependencies
 npm install
+
+# 3. Configure Environment
+cp .env.example .env
+# Ensure DATABASE_URL=postgresql://postgres:postgres@localhost:5432/streams
+
+# 4. Run Migrations & Start
+npx prisma migrate deploy
 npm run dev
-# open http://localhost:3000
 ```
 
-Seed a demo stream (uses mocks if no env vars):
-```bash
-npm run demo
-```
+---
 
-Connect a wallet (Xverse, Bitcoin testnet):
-- Install Xverse browser extension and switch to Bitcoin testnet.
-- Click “Connect Xverse” (top-right of each page). If not connected, the app falls back to a deterministic mock signer.
+## Environment Variables
+
+Configuration is strictly validated on startup (`lib/env.ts`).
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL Connection String | (Required) |
+| `scROLLS_API_BASE` | Scrolls API Endpoint | `https://scrolls.charms.dev` |
+| `CHARMS_API_BASE` | Charms Prover Endpoint | `https://v8.charms.dev` |
+| `REQUIRE_WALLET_SIG` | Enforce wallet ownership | `true` |
 
 ---
 
-## Environment
-Set any of the following to hit real testnet endpoints; leave unset to use mocks.
+## Key Flows
 
-```bash
-# Wallet signature enforcement
-REQUIRE_WALLET_SIG=true          # require valid wallet signature on API routes
+1.  **Create Stream**:
+    - User submits stream details.
+    - App calls **Scrolls** to derive a unique Vault Address.
+    - App calls **Charms** to mint a "StreamCharm" tracking the state.
+    - User funds the Vault Address (mocked in demo).
 
-# Grail Pro
-GRAIL_API_BASE=https://grail-pro-testnet.example.com
-GRAIL_API_KEY=...
-GRAIL_ALLOW_FALLBACK=true   # set to false to fail fast
-
-# Charms
-CHARMS_API_BASE=https://charms-testnet.example.com
-CHARMS_API_KEY=...
-CHARMS_ALLOW_FALLBACK=true
-
-# zkBTC
-ZKBTC_API_BASE=https://zkbtc-testnet.example.com
-ZKBTC_API_KEY=...
-ZKBTC_ALLOW_FALLBACK=true
-```
-
-SQLite lives at `data/streams.db` and is created automatically.
+2.  **Claim Stream**:
+    - App calculates claimable amount.
+    - App constructs a **Spell** (ZK execution trace).
+    - App calls **Charms Prover** to verify and generate a transaction (`spell_tx`).
+    - App calls **Scrolls** to sign the `spell_tx`.
+    - Signed transaction is returned to user/relayed.
 
 ---
-
-## Key flows
-- **/pages/create.tsx** → POST `/api/createStream`: deposits into Grail, mints StreamCharm, persists stream.
-- **/pages/claim.tsx** → POST `/api/claimStream`: generates zk proof, verifies, updates streamed commitment, simulates cross-chain release.
-- **/pages/verify.tsx** → POST `/api/verifyProof`: auditor-style verification of provided proof.
-- **/api/streams**: lightweight dashboard feed for all streams + claims.
-
----
-
-## API reference (local dev)
-- `POST /api/createStream`  
-  `{ totalAmountBtc, rateSatsPerSec, startUnix, cliffUnix, beneficiary, revocationPubkey, policy }`
-- `POST /api/claimStream`  
-  `{ streamId, claimedAmountSats, timestamp }`
-- `POST /api/verifyProof`  
-  `{ streamId, proof, claimedAmountSats, timestamp }`
-- `GET /api/streams` → `{ streams: [...] }`
-
-All amounts are integers in sats except `totalAmountBtc` (BTC) on creation.
-
----
-
-## Demo & testing checklist
-- `npm run demo` seeds a stream with mock/testnet integrations.
-- `npm run dev` and visit:
-  - `/` dashboard (fetches `/api/streams`)
-  - `/create` to mint a new stream
-  - `/claim` to generate & verify zk proof, update commitments
-  - `/verify` to audit any proof payload
-- Toggle env vars above to switch between real testnet calls and deterministic mocks.
-
----
-
-## Production hardening (next steps)
-- Wire real Grail/Charms/zkBTC endpoints and secrets management.
-- Add per-request auth + rate limiting.
-- Persist to external DB (Postgres) and add background stream updaters.
-- Integrate real cross-chain unlock flows (Cardano/Litecoin testnets).
 
 ## License
 MIT

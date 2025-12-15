@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Stream {
+  id                       String   @id
+  vault_id                 String?
+  charm_id                 String?
+  beneficiary              String
+  total_amount_sats        BigInt
+  rate_sats_per_sec        BigInt
+  start_unix               BigInt
+  cliff_unix               BigInt
+  revocation_pubkey        String
+  streamed_commitment_sats BigInt   @default(0)
+  status                   String   @default("active")
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  claims Claim[]
+
+  @@map("streams")
+}
+
+model Claim {
+  id          String   @id
+  stream_id   String
+  amount_sats BigInt
+  proof       String
+  verified    Int      @default(0)
+  created_at  DateTime @default(now())
+
+  stream Stream @relation(fields: [stream_id], references: [id])
+
+  @@map("claims")
+}
+
+model Vault {
+  id          String   @id
+  amount_sats BigInt
+  beneficiary String
+  policy      String
+  created_at  DateTime @default(now())
+
+  @@map("vaults")
+}

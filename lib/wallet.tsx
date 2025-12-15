@@ -6,11 +6,11 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { AddressPurpose, request, signMessage } from "@sats-connect/core";
+import { AddressPurpose, request, signMessage, BitcoinNetworkType } from "@sats-connect/core";
 
 type WalletContextValue = {
   address: string | null;
-  network: "Testnet" | "Mainnet";
+  network: BitcoinNetworkType;
   connecting: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
@@ -19,7 +19,7 @@ type WalletContextValue = {
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-const network = { type: "Testnet" as const };
+const network = { type: BitcoinNetworkType.Testnet };
 const appInfo = { name: "Sovereign BTC Streams" };
 
 export function WalletProvider({ children }: { children: ReactNode }) {
@@ -61,8 +61,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             address,
             message,
           },
-          appInfo,
-          onFinish: (resp) => resolve(resp.signature ?? null),
+          onFinish: (signature) => resolve(signature),
           onCancel: () => resolve(null),
         });
       });

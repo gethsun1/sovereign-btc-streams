@@ -10,8 +10,8 @@ This architecture allows for **Sovereign** streams, where funds are held in a va
 
 ```mermaid
 flowchart TD
-    A[Next.js App] --> B[/api/createStream]
-    A --> C[/api/claimStream]
+    A[Next.js App] --> B["/api/createStream"]
+    A --> C["/api/claimStream"]
     
     subgraph "Sovereign Infrastructure"
         B -->|Derive Address| D[Scrolls API]

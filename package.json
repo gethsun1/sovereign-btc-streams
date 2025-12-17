@@ -33,7 +33,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@types/bitcoinjs-lib": "^6.1.0",
+    "@types/bitcoinjs-lib": "^5.0.4",
     "@types/jest": "^29.5.12",
     "@types/node": "^20",
     "@types/react": "^19",

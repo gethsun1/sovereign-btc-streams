@@ -1,0 +1,1 @@
+/home/quantum/Documents/GKM/SovereignBTCStreams/sovereign-btc-streams/charms-app/target/wasm32-wasip1/release/libbtc_stream_charm.rlib: /home/quantum/Documents/GKM/SovereignBTCStreams/sovereign-btc-streams/charms-app/src/lib.rs

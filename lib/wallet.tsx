@@ -19,7 +19,16 @@ type WalletContextValue = {
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-const network = { type: BitcoinNetworkType.Testnet };
+function getBitcoinNetworkType(): BitcoinNetworkType {
+  const raw = (process.env.NEXT_PUBLIC_NETWORK || "testnet").toLowerCase();
+  if (raw === "testnet4") return BitcoinNetworkType.Testnet4;
+  if (raw === "mainnet" || raw === "main") return BitcoinNetworkType.Mainnet;
+  if (raw === "signet") return BitcoinNetworkType.Signet;
+  if (raw === "regtest") return BitcoinNetworkType.Regtest;
+  return BitcoinNetworkType.Testnet;
+}
+
+const network = { type: getBitcoinNetworkType() };
 const appInfo = { name: "Sovereign BTC Streams" };
 
 export function WalletProvider({ children }: { children: ReactNode }) {

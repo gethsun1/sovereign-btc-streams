@@ -39,54 +39,73 @@ flowchart TD
 
 ---
 
-## Quickstart (Docker)
+## 🚀 Quick Start
 
-The easiest way to run the full stack (App + DB) is via Docker Compose.
+See **[SETUP.md](./SETUP.md)** for detailed setup instructions.
+
+### Docker (Recommended)
 
 ```bash
-# 1. Start the Database
+cp .env.example .env
 docker compose up -d db
-
-# 2. Run Migrations
 npx prisma migrate deploy
-
-# 3. Start the Application
 docker compose up -d app
 # App available at http://localhost:3000
 ```
 
-## Quickstart (Local Dev)
-
-If you prefer running the app locally against a Dockerized DB:
+### Local Development
 
 ```bash
-# 1. Start DB
-docker compose up -d db
-
-# 2. Install Dependencies
 npm install
-
-# 3. Configure Environment
 cp .env.example .env
-# Ensure DATABASE_URL=postgresql://postgres:postgres@localhost:5432/streams
-
-# 4. Run Migrations & Start
+docker compose up -d db
 npx prisma migrate deploy
 npm run dev
 ```
 
+### Run Tests
+
+```bash
+npm install
+npm test
+npm run test:coverage
+```
+
 ---
 
-## Environment Variables
+## 📋 Environment Variables
 
-Configuration is strictly validated on startup (`lib/env.ts`).
+See `.env.example` for all configuration options. Key variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL Connection String | (Required) |
-| `scROLLS_API_BASE` | Scrolls API Endpoint | `https://scrolls.charms.dev` |
+| `SCROLLS_API_BASE` | Scrolls API Endpoint | `https://scrolls.charms.dev` |
 | `CHARMS_API_BASE` | Charms Prover Endpoint | `https://v8.charms.dev` |
-| `REQUIRE_WALLET_SIG` | Enforce wallet ownership | `true` |
+| `REQUIRE_WALLET_SIG` | Enforce wallet ownership | `false` (dev), `true` (prod) |
+
+---
+
+## 🏥 Health Checks
+
+- **Health**: `GET /api/health` - Application health status
+- **Ready**: `GET /api/ready` - Readiness for traffic
+
+---
+
+## 🧪 Testing
+
+The project includes comprehensive test coverage:
+
+- **Unit Tests**: Business logic and utilities
+- **Integration Tests**: API endpoints
+- **Coverage Goal**: 70% across all metrics
+
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # With coverage report
+```
 
 ---
 

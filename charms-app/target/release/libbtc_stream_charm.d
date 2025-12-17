@@ -1,0 +1,1 @@
+/home/quantum/Documents/GKM/SovereignBTCStreams/sovereign-btc-streams/charms-app/target/release/libbtc_stream_charm.so: /home/quantum/Documents/GKM/SovereignBTCStreams/sovereign-btc-streams/charms-app/src/lib.rs

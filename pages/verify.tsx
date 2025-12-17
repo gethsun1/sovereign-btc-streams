@@ -1,21 +1,26 @@
 import Head from "next/head";
+import NextLink from "next/link";
 import {
   Box,
   Button,
   Container,
+  Flex,
   FormControl,
   FormLabel,
   Heading,
+  Input,
   NumberInput,
   NumberInputField,
-  Stack,
   Text,
   Textarea,
+  VStack,
   useToast,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
 import { nowUnix } from "@/lib/utils";
+import { CheckCircleIcon } from "@/components/icons/StreamIcons";
+import { FloatingBitcoinPattern, GlowOrb } from "@/components/decorative/BackgroundElements";
 
 export default function VerifyPage() {
   const toast = useToast();
@@ -54,56 +59,164 @@ export default function VerifyPage() {
       <Head>
         <title>Verify Proof | Sovereign BTC Streams</title>
       </Head>
-      <Box bgGradient="linear(to-b, gray.900, gray.800)" minH="100vh" py={12}>
-        <Container maxW="3xl">
-          <Stack spacing={8}>
-            <Heading size="lg">Audit zkBTC proofs</Heading>
-            <Box bg="gray.800" border="1px solid" borderColor="gray.700" rounded="xl" p={6}>
-              <Stack spacing={4}>
+      <Box position="relative" minH="100vh" py={12} overflow="hidden">
+        <FloatingBitcoinPattern />
+        <GlowOrb top="40%" left="70%" color="#f7931a" size="450px" />
+        
+        <Container maxW="4xl" position="relative" zIndex={1}>
+          <VStack spacing={8} align="stretch">
+            <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
+              <Flex align="center" gap={3}>
+                <CheckCircleIcon size={32} />
+                <Heading
+                  size="xl"
+                  bgGradient="linear(to-r, bitcoin.400, gold.400)"
+                  bgClip="text"
+                  fontFamily="heading"
+                >
+                  Audit zkBTC Proofs
+                </Heading>
+              </Flex>
+              <NextLink href="/">
+                <Button variant="ghost" size="sm">
+                  ← Back
+                </Button>
+              </NextLink>
+            </Flex>
+            
+            <Box
+              bg="rgba(26, 20, 16, 0.6)"
+              backdropFilter="blur(20px)"
+              border="1px solid"
+              borderColor="rgba(247, 147, 26, 0.2)"
+              borderRadius="2xl"
+              p={8}
+              boxShadow="0 8px 32px rgba(0, 0, 0, 0.4)"
+            >
+              <VStack spacing={6} align="stretch">
                 <FormControl>
-                  <FormLabel>Stream ID</FormLabel>
-                  <Textarea
+                  <FormLabel color="gray.300" fontWeight="600" fontSize="sm">
+                    Stream ID
+                  </FormLabel>
+                  <Input
                     placeholder="stream_..."
                     value={streamId}
                     onChange={(e) => setStreamId(e.target.value)}
+                    fontFamily="mono"
+                    fontSize="sm"
                   />
                 </FormControl>
+                
                 <FormControl>
-                  <FormLabel>Claimed amount (sats)</FormLabel>
+                  <FormLabel color="gray.300" fontWeight="600" fontSize="sm">
+                    Claimed Amount (sats)
+                  </FormLabel>
                   <NumberInput
                     min={1}
                     value={claimedAmountSats}
                     onChange={(v) => setClaimedAmountSats(Number(v))}
                   >
-                    <NumberInputField />
+                    <NumberInputField
+                      bg="rgba(26, 20, 16, 0.8)"
+                      borderColor="rgba(247, 147, 26, 0.2)"
+                      _hover={{ borderColor: "rgba(247, 147, 26, 0.3)" }}
+                      _focus={{
+                        borderColor: "bitcoin.400",
+                        boxShadow: "0 0 0 1px rgba(247, 147, 26, 0.4)",
+                      }}
+                    />
                   </NumberInput>
                 </FormControl>
+                
                 <FormControl>
-                  <FormLabel>Proof JSON</FormLabel>
+                  <FormLabel color="gray.300" fontWeight="600" fontSize="sm">
+                    Proof JSON
+                  </FormLabel>
                   <Textarea
                     placeholder='{"proof": "..."}'
-                    minH="140px"
+                    minH="180px"
                     value={proofText}
                     onChange={(e) => setProofText(e.target.value)}
+                    fontFamily="mono"
+                    fontSize="sm"
+                    bg="rgba(26, 20, 16, 0.8)"
+                    borderColor="rgba(247, 147, 26, 0.2)"
+                    _hover={{ borderColor: "rgba(247, 147, 26, 0.3)" }}
+                    _focus={{
+                      borderColor: "bitcoin.400",
+                      boxShadow: "0 0 0 1px rgba(247, 147, 26, 0.4)",
+                    }}
                   />
                 </FormControl>
-                <Button colorScheme="blue" onClick={handleVerify} isLoading={isVerifying}>
-                  Verify proof
+                
+                <Button
+                  onClick={handleVerify}
+                  isLoading={isVerifying}
+                  size="lg"
+                  width="full"
+                  leftIcon={<CheckCircleIcon size={20} />}
+                >
+                  Verify Proof
                 </Button>
-              </Stack>
+              </VStack>
             </Box>
 
             {result && (
-              <Box bg="gray.800" border="1px solid" borderColor="gray.700" rounded="xl" p={6}>
-                <Heading size="md" mb={3}>
-                  Verification Result
-                </Heading>
-                <Text color="gray.300">Valid: {result.verification.valid ? "true" : "false"}</Text>
-                <Text color="gray.300">Digest: {result.verification.digest}</Text>
-                <Text color="gray.300">Verified via: {result.verification.via}</Text>
+              <Box
+                bg="rgba(26, 20, 16, 0.6)"
+                backdropFilter="blur(20px)"
+                border="2px solid"
+                borderColor={result.verification.valid ? "bitcoin.400" : "red.500"}
+                borderRadius="2xl"
+                p={8}
+                boxShadow={result.verification.valid 
+                  ? "0 12px 40px rgba(247, 147, 26, 0.3)" 
+                  : "0 12px 40px rgba(220, 38, 38, 0.3)"
+                }
+              >
+                <Flex align="center" gap={3} mb={6}>
+                  <CheckCircleIcon size={32} />
+                  <Heading
+                    size="lg"
+                    bgGradient={result.verification.valid 
+                      ? "linear(to-r, bitcoin.400, gold.400)" 
+                      : "linear(to-r, red.400, red.600)"
+                    }
+                    bgClip="text"
+                  >
+                    Verification Result
+                  </Heading>
+                </Flex>
+                
+                <VStack align="stretch" spacing={3}>
+                  <Flex justify="space-between" p={3} bg="rgba(10, 10, 10, 0.4)" borderRadius="lg">
+                    <Text color="gray.400" fontWeight="500">Status:</Text>
+                    <Text 
+                      color={result.verification.valid ? "bitcoin.400" : "red.400"} 
+                      fontWeight="700"
+                      textTransform="uppercase"
+                    >
+                      {result.verification.valid ? "VALID ✓" : "INVALID ✗"}
+                    </Text>
+                  </Flex>
+                  
+                  <Flex justify="space-between" p={3} bg="rgba(10, 10, 10, 0.4)" borderRadius="lg">
+                    <Text color="gray.400" fontWeight="500">Digest:</Text>
+                    <Text color="gray.300" fontFamily="mono" fontSize="sm">
+                      {result.verification.digest}
+                    </Text>
+                  </Flex>
+                  
+                  <Flex justify="space-between" p={3} bg="rgba(10, 10, 10, 0.4)" borderRadius="lg">
+                    <Text color="gray.400" fontWeight="500">Verified via:</Text>
+                    <Text color="gold.400" fontWeight="600">
+                      {result.verification.via}
+                    </Text>
+                  </Flex>
+                </VStack>
               </Box>
             )}
-          </Stack>
+          </VStack>
         </Container>
       </Box>
     </>

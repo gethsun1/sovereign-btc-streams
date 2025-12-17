@@ -1,5 +1,4 @@
 import "dotenv/config";
-console.log("DEBUG: DATABASE_URL is", process.env.DATABASE_URL);
 import "./lib/env";
 import type { NextConfig } from "next";
 

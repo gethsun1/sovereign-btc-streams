@@ -39,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         beneficiary: body.beneficiary,
         revocationPubkey: body.revocationPubkey,
         policy: body.policy,
-        walletAddress,
       },
     });
     verifyWalletSignature({

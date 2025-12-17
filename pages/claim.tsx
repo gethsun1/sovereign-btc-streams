@@ -1,16 +1,18 @@
 import Head from "next/head";
+import NextLink from "next/link";
 import {
   Box,
   Button,
   Container,
+  Flex,
   FormControl,
   FormLabel,
   Heading,
   NumberInput,
   NumberInputField,
   Select,
-  Stack,
   Text,
+  VStack,
   useToast,
 } from "@chakra-ui/react";
 import axios from "axios";
@@ -21,6 +23,8 @@ import { computeVestedAmount, nowUnix, satsToBtc } from "@/lib/utils";
 import { ProofState } from "@/components/ProofStatus";
 import WalletConnectButton from "@/components/WalletConnectButton";
 import { useWallet } from "@/lib/wallet";
+import { VaultIcon, LightningIcon } from "@/components/icons/StreamIcons";
+import { FloatingBitcoinPattern, GlowOrb } from "@/components/decorative/BackgroundElements";
 
 export default function ClaimPage() {
   const toast = useToast();
@@ -115,54 +119,128 @@ export default function ClaimPage() {
       <Head>
         <title>Claim Stream | Sovereign BTC Streams</title>
       </Head>
-      <Box bgGradient="linear(to-b, gray.900, gray.800)" minH="100vh" py={12}>
-        <Container maxW="4xl">
-          <Stack spacing={8}>
-            <Stack direction="row" justify="space-between" align="center">
-              <Heading size="lg">Claim vested BTC</Heading>
-              <WalletConnectButton />
-            </Stack>
+      <Box position="relative" minH="100vh" py={12} overflow="hidden">
+        <FloatingBitcoinPattern />
+        <GlowOrb top="30%" left="10%" color="#fbbf24" size="500px" />
+        
+        <Container maxW="5xl" position="relative" zIndex={1}>
+          <VStack spacing={8} align="stretch">
+            <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
+              <Flex align="center" gap={3}>
+                <VaultIcon size={32} />
+                <Heading
+                  size="xl"
+                  bgGradient="linear(to-r, bitcoin.400, gold.400)"
+                  bgClip="text"
+                  fontFamily="heading"
+                >
+                  Claim Vested BTC
+                </Heading>
+              </Flex>
+              <Flex gap={3}>
+                <NextLink href="/">
+                  <Button variant="ghost" size="sm">
+                    ← Back
+                  </Button>
+                </NextLink>
+                <WalletConnectButton />
+              </Flex>
+            </Flex>
 
-            <Box bg="gray.800" border="1px solid" borderColor="gray.700" rounded="xl" p={6}>
-              <Stack spacing={4}>
+            <Box
+              bg="rgba(26, 20, 16, 0.6)"
+              backdropFilter="blur(20px)"
+              border="1px solid"
+              borderColor="rgba(247, 147, 26, 0.2)"
+              borderRadius="2xl"
+              p={8}
+              boxShadow="0 8px 32px rgba(0, 0, 0, 0.4)"
+            >
+              <VStack spacing={6} align="stretch">
                 <FormControl>
-                  <FormLabel>Select stream</FormLabel>
+                  <FormLabel color="gray.300" fontWeight="600" fontSize="sm">
+                    Select Stream
+                  </FormLabel>
                   <Select
                     value={selectedId}
                     onChange={(e) => setSelectedId(e.target.value)}
                     placeholder="Choose a stream"
+                    bg="rgba(26, 20, 16, 0.8)"
+                    borderColor="rgba(247, 147, 26, 0.2)"
+                    _hover={{ borderColor: "rgba(247, 147, 26, 0.3)" }}
+                    _focus={{
+                      borderColor: "bitcoin.400",
+                      boxShadow: "0 0 0 1px rgba(247, 147, 26, 0.4)",
+                    }}
                   >
                     {streams.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.id} ({s.status})
+                      <option key={s.id} value={s.id} style={{ background: '#1a1410' }}>
+                        {s.id.slice(0, 12)}... ({s.status})
                       </option>
                     ))}
                   </Select>
                 </FormControl>
 
+                <Box
+                  p={4}
+                  bg="rgba(247, 147, 26, 0.05)"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor="rgba(247, 147, 26, 0.2)"
+                >
+                  <Flex justify="space-between" align="center">
+                    <Text color="gray.400" fontSize="sm" fontWeight="500">
+                      Claimable Now
+                    </Text>
+                    <VStack align="end" spacing={0}>
+                      <Text
+                        fontSize="2xl"
+                        fontWeight="700"
+                        bgGradient="linear(to-r, bitcoin.400, gold.400)"
+                        bgClip="text"
+                      >
+                        ₿ {satsToBtc(claimable).toFixed(8)}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {claimable.toLocaleString()} sats
+                      </Text>
+                    </VStack>
+                  </Flex>
+                </Box>
+
                 <FormControl>
-                  <FormLabel>Claim amount (sats)</FormLabel>
+                  <FormLabel color="gray.300" fontWeight="600" fontSize="sm">
+                    Claim Amount (sats)
+                  </FormLabel>
                   <NumberInput
                     min={1}
+                    max={claimable}
                     value={amountSats}
                     onChange={(v) => setAmountSats(Number(v))}
                   >
-                    <NumberInputField />
+                    <NumberInputField
+                      bg="rgba(26, 20, 16, 0.8)"
+                      borderColor="rgba(247, 147, 26, 0.2)"
+                      _hover={{ borderColor: "rgba(247, 147, 26, 0.3)" }}
+                      _focus={{
+                        borderColor: "bitcoin.400",
+                        boxShadow: "0 0 0 1px rgba(247, 147, 26, 0.4)",
+                      }}
+                    />
                   </NumberInput>
-                  <Text fontSize="sm" color="gray.400" mt={1}>
-                    Claimable now: {claimable} sats ({satsToBtc(claimable).toFixed(8)} BTC)
-                  </Text>
                 </FormControl>
 
                 <Button
-                  colorScheme="blue"
                   onClick={submitClaim}
                   isLoading={isClaiming}
                   isDisabled={!selectedStream || claimable <= 0}
+                  size="lg"
+                  width="full"
+                  leftIcon={<LightningIcon size={20} />}
                 >
-                  Generate proof & claim
+                  Generate Proof & Claim
                 </Button>
-              </Stack>
+              </VStack>
             </Box>
 
             {selectedStream && (
@@ -174,7 +252,7 @@ export default function ClaimPage() {
                 proofState={proofState}
               />
             )}
-          </Stack>
+          </VStack>
         </Container>
       </Box>
     </>

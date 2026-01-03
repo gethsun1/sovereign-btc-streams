@@ -43,6 +43,14 @@ flowchart TD
 
 See **[SETUP.md](./SETUP.md)** for detailed setup instructions.
 
+### 🎬 Hackathon Demo Setup
+
+For a quick demo setup, see **[DEMO_GUIDE.md](./DEMO_GUIDE.md)** which includes:
+- Step-by-step demo flow matching the 2-minute narration
+- Pre-seeded demo data
+- Mock-friendly configuration
+- Troubleshooting tips
+
 ### Docker (Recommended)
 
 ```bash

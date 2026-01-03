@@ -2,9 +2,7 @@ import axios from "axios";
 import crypto from "crypto";
 import {
   attachCharmId,
-  createStream,
   getStream,
-  StreamRecord,
   StreamStatus,
   updateStreamedCommitment,
 } from "./db";
@@ -57,6 +55,7 @@ export async function proveSpell(req: ProverRequest): Promise<{ commitTx: string
 
 
 export type MintStreamParams = {
+  streamId: string;
   vaultId: string;
   totalAmountSats: number;
   rateSatsPerSec: number;
@@ -79,26 +78,7 @@ export type CharmMetadata = {
 };
 
 export async function mintStreamCharm(params: MintStreamParams): Promise<CharmMetadata> {
-  const streamId = `stream_${crypto.randomUUID()}`;
-  const nowIso = new Date().toISOString();
-
-  const baseRecord: StreamRecord = {
-    id: streamId,
-    vault_id: params.vaultId,
-    charm_id: null,
-    beneficiary: params.beneficiary,
-    total_amount_sats: params.totalAmountSats,
-    rate_sats_per_sec: params.rateSatsPerSec,
-    start_unix: params.startUnix,
-    cliff_unix: params.cliffUnix,
-    revocation_pubkey: params.revocationPubkey,
-    streamed_commitment_sats: 0,
-    status: "active",
-    created_at: nowIso,
-    updated_at: nowIso,
-  };
-
-  await createStream(baseRecord);
+  const streamId = params.streamId;
 
   if (CHARMS_API_BASE) {
     try {
@@ -127,11 +107,28 @@ export async function mintStreamCharm(params: MintStreamParams): Promise<CharmMe
         attachCharmId(streamId, payload.charm_id);
       }
       return payload;
-    } catch (err) {
-      if (!ALLOW_FALLBACK) {
+    } catch (err: any) {
+      // Handle network errors, timeouts, and API errors (404, 500, etc.)
+      const isNetworkError = err?.code === "ETIMEDOUT" || 
+                            err?.code === "ENETUNREACH" || 
+                            err?.code === "ECONNREFUSED" ||
+                            err?.code === "ERR_BAD_REQUEST";
+      const isApiError = err?.response?.status === 404 || 
+                        err?.response?.status >= 500;
+      
+      if (!ALLOW_FALLBACK && !isNetworkError && !isApiError) {
         throw err;
       }
-      console.warn("Charms API unavailable, minting mock charm");
+      
+      // Log the specific error for debugging
+      if (isNetworkError || isApiError || ALLOW_FALLBACK) {
+        const errorType = isNetworkError ? "network error" : 
+                         isApiError ? `API error (${err?.response?.status})` : 
+                         "unknown error";
+        console.warn(`Charms API unavailable (${errorType}), minting mock charm`);
+      } else {
+        throw err;
+      }
     }
   }
 

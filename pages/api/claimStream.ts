@@ -51,12 +51,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       amountSats: claimedAmountSats,
       timestamp: ts,
     });
-    verifyWalletSignature({
+    
+    // Attempt signature verification, but don't fail if it's not required
+    const sigVerified = verifyWalletSignature({
       message,
       address: callerWallet,
       signature: walletSignature,
       require: shouldRequireWalletSig(),
     });
+    
+    // Log warning if signature verification failed but is not required
+    if (!sigVerified && !shouldRequireWalletSig()) {
+      console.warn(
+        "Wallet signature verification failed for claim, but continuing because REQUIRE_WALLET_SIG is not set to 'true'."
+      );
+    }
 
     // --- Sovereign Flow: Charms Prover + Scrolls Vault ---
 

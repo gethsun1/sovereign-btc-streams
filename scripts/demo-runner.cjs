@@ -34,7 +34,17 @@ appendLog({
 try {
   require("ts-node").register({
     transpileOnly: true,
-    compilerOptions: { module: "CommonJS", moduleResolution: "node" },
+    compilerOptions: { 
+      module: "CommonJS", 
+      moduleResolution: "node",
+      esModuleInterop: true,
+      allowSyntheticDefaultImports: true,
+      resolveJsonModule: true,
+      baseUrl: ".",
+      paths: {
+        "@/*": ["./*"]
+      }
+    },
   });
   appendLog({
     hypothesisId: "H-runner",

@@ -70,11 +70,14 @@ export default function CreateStreamPage() {
       setResponse(res.data);
       toast({ title: "Stream created", status: "success", position: "top" });
     } catch (err: any) {
+      const errorMessage = err?.response?.data?.error ?? err?.message ?? "Unknown error";
       toast({
         title: "Failed to create stream",
-        description: err?.response?.data?.error ?? "Unknown error",
+        description: errorMessage,
         status: "error",
         position: "top",
+        duration: 5000,
+        isClosable: true,
       });
     } finally {
       setSubmitting(false);

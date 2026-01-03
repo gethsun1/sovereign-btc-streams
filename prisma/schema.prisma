@@ -21,8 +21,7 @@ model Stream {
   status                   String   @default("active")
   created_at               DateTime @default(now())
   updated_at               DateTime @updatedAt
-
-  claims Claim[]
+  claims                   Claim[]
 
   @@map("streams")
 }
@@ -34,8 +33,7 @@ model Claim {
   proof       String
   verified    Int      @default(0)
   created_at  DateTime @default(now())
-
-  stream Stream @relation(fields: [stream_id], references: [id])
+  stream      Stream   @relation(fields: [stream_id], references: [id])
 
   @@map("claims")
 }

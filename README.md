@@ -1,6 +1,8 @@
 # Sovereign BTC Streams
 
-![Cover Image](https://drive.google.com/file/d/1iBoQTuBOYEv84Dp8TVRbTy8PCkFXI4MZ/view?usp=sharing)
+![Cover Image](https://photos.app.goo.gl/WpnkR4p58ES7N77X9)
+
+---
 
 Sovereign BTC Streams is a Next.js DApp that demonstrates **vault-backed BTC streaming** using **Charms** (ZK Logic) and **Scrolls** (Programmable Vaults).
 

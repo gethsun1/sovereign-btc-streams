@@ -1,6 +1,6 @@
 # Sovereign BTC Streams
 
-![Cover Image](https://photos.app.goo.gl/WpnkR4p58ES7N77X9)
+[![sovreignstreams-cover.png](https://i.postimg.cc/G2sCBzgv/sovreignstreams-cover.png)](https://postimg.cc/sQy8qPr2)
 
 ---
 
